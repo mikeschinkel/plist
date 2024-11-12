@@ -1,10 +1,12 @@
-# OS X XML Plist library for Go
-![Go](https://github.com/groob/plist/workflows/Go/badge.svg)
+# Go Plist library
 
-The plist library is used for decoding and encoding XML Plists, usually from HTTP streams.
+[![CI/CD](https://github.com/micromdm/plist/workflows/CI%2FCD/badge.svg)](https://github.com/micromdm/plist/actions) [![Go Reference](https://pkg.go.dev/badge/github.com/micromdm/plist.svg)](https://pkg.go.dev/github.com/micromdm/plist)
 
-Example:
-```
+This Plist library is used for decoding and encoding Apple Property Lists in both XML and binary forms.
+
+Example using HTTP streams:
+
+```go
 func someHTTPHandler(w http.ResponseWriter, r *http.Request) {
 	var sparseBundleHeader struct {
 		InfoDictionaryVersion *string `plist:"CFBundleInfoDictionaryVersion"`
@@ -22,5 +24,6 @@ func someHTTPHandler(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-# Credit
-This library is based of [DHowett's](https://github.com/DHowett/go-plist) library but has an API that's more similar to the XML and JSON libraries in the standard library. The plist.Decoder() accepts an `io.Reader` instead of an `io.ReadSeeker` 
+## Credit
+
+This library is based on the [DHowett go-plist](https://github.com/DHowett/go-plist) library but has an API that is more like the XML and JSON package in the Go standard library. I.e. the `plist.Decoder()` accepts an `io.Reader` instead of an `io.ReadSeeker` 
