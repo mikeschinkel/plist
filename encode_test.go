@@ -79,39 +79,63 @@ var dictRef = `<?xml version="1.0" encoding="UTF-8"?>
 var indentRef = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
+<dict>
+   <key>Boolean</key>
+   <true/>
+   <key>BooleanList</key>
+   <array>
+      <true/>
+      <false/>
+   </array>
+   <key>CFBundleInfoDictionaryVersion</key>
+   <string>6.0</string>
+   <key>Strings</key>
+   <array>
+      <string>a</string>
+      <string>b</string>
+   </array>
+   <key>band-size</key>
+   <integer>8388608</integer>
+   <key>bundle-backingstore-version</key>
+   <integer>1</integer>
+   <key>diskimage-bundle-type</key>
+   <string>com.apple.diskimage.sparsebundle</string>
+   <key>size</key>
+   <integer>4398046511104</integer>
+   <key>useless</key>
    <dict>
-      <key>CFBundleInfoDictionaryVersion</key>
-      <string>6.0</string>
-      <key>band-size</key>
-      <integer>8388608</integer>
-      <key>bundle-backingstore-version</key>
-      <integer>1</integer>
-      <key>diskimage-bundle-type</key>
-      <string>com.apple.diskimage.sparsebundle</string>
-      <key>size</key>
-      <integer>4398046511104</integer>
-      <key>useless</key>
-      <dict>
-         <key>unused-string</key>
-         <string>unused</string>
-      </dict>
+      <key>unused-string</key>
+      <string>unused</string>
    </dict>
+</dict>
 </plist>
 `
 
 var indentRefOmit = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-   <dict>
-      <key>CFBundleInfoDictionaryVersion</key>
-      <string>6.0</string>
-      <key>bundle-backingstore-version</key>
-      <integer>1</integer>
-      <key>diskimage-bundle-type</key>
-      <string>com.apple.diskimage.sparsebundle</string>
-      <key>size</key>
-      <integer>4398046511104</integer>
-   </dict>
+<dict>
+   <key>Boolean</key>
+   <true/>
+   <key>BooleanList</key>
+   <array>
+      <true/>
+      <false/>
+   </array>
+   <key>CFBundleInfoDictionaryVersion</key>
+   <string>6.0</string>
+   <key>Strings</key>
+   <array>
+      <string>a</string>
+      <string>b</string>
+   </array>
+   <key>bundle-backingstore-version</key>
+   <integer>1</integer>
+   <key>diskimage-bundle-type</key>
+   <string>com.apple.diskimage.sparsebundle</string>
+   <key>size</key>
+   <integer>4398046511104</integer>
+</dict>
 </plist>
 `
 
@@ -180,11 +204,11 @@ func TestNewLineString(t *testing.T) {
 	var ok = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-   <dict>
-      <key>Content</key>
-      <string>foo
+<dict>
+   <key>Content</key>
+   <string>foo
 bar</string>
-   </dict>
+</dict>
 </plist>
 `
 	out := string(b)
@@ -203,6 +227,9 @@ func TestIndent(t *testing.T) {
 		DiskImageBundleType   string     `plist:"diskimage-bundle-type"`
 		Size                  uint64     `plist:"size"`
 		Unused                testStruct `plist:"useless"`
+		Boolean               bool
+		BooleanList           []bool
+		Strings               []string
 	}{
 		InfoDictionaryVersion: "6.0",
 		BandSize:              8388608,
@@ -210,6 +237,9 @@ func TestIndent(t *testing.T) {
 		DiskImageBundleType:   "com.apple.diskimage.sparsebundle",
 		BackingStoreVersion:   1,
 		Unused:                testStruct{UnusedString: "unused"},
+		Boolean:               true,
+		BooleanList:           []bool{true, false},
+		Strings:               []string{"a", "b"},
 	}
 	b, err := MarshalIndent(sparseBundleHeader, "   ")
 	if err != nil {
@@ -217,7 +247,7 @@ func TestIndent(t *testing.T) {
 	}
 	out := string(b)
 	if out != indentRef {
-		t.Errorf("MarshalIndent(%v) = \n%v, \nwant\n %v", sparseBundleHeader, out, indentRef)
+		t.Errorf("MarshalIndent(%v) = \n%v, \nwant\n%v", sparseBundleHeader, out, indentRef)
 	}
 }
 
@@ -230,6 +260,9 @@ func TestOmitNotEmpty(t *testing.T) {
 		DiskImageBundleType   string     `plist:"diskimage-bundle-type"`
 		Size                  uint64     `plist:"size"`
 		Unused                testStruct `plist:"useless"`
+		Boolean               bool
+		BooleanList           []bool
+		Strings               []string
 	}{
 		InfoDictionaryVersion: "6.0",
 		BandSize:              8388608,
@@ -237,6 +270,9 @@ func TestOmitNotEmpty(t *testing.T) {
 		DiskImageBundleType:   "com.apple.diskimage.sparsebundle",
 		BackingStoreVersion:   1,
 		Unused:                testStruct{UnusedString: "unused"},
+		Boolean:               true,
+		BooleanList:           []bool{true, false},
+		Strings:               []string{"a", "b"},
 	}
 	b, err := MarshalIndent(sparseBundleHeader, "   ")
 	if err != nil {
@@ -244,7 +280,7 @@ func TestOmitNotEmpty(t *testing.T) {
 	}
 	out := string(b)
 	if out != indentRef {
-		t.Errorf("MarshalIndent(%v) = \n%v, \nwant\n %v", sparseBundleHeader, out, indentRef)
+		t.Errorf("MarshalIndent(%v) = \n%v, \nwant\n %v", sparseBundleHeader, out, indentRefOmit)
 	}
 }
 
@@ -257,11 +293,17 @@ func TestOmitIsEmpty(t *testing.T) {
 		DiskImageBundleType   string     `plist:"diskimage-bundle-type"`
 		Size                  uint64     `plist:"size"`
 		Unused                testStruct `plist:"useless,omitempty"`
+		Boolean               bool
+		BooleanList           []bool
+		Strings               []string
 	}{
 		InfoDictionaryVersion: "6.0",
 		Size:                  4 * 1048576 * 1024 * 1024,
 		DiskImageBundleType:   "com.apple.diskimage.sparsebundle",
 		BackingStoreVersion:   1,
+		Boolean:               true,
+		BooleanList:           []bool{true, false},
+		Strings:               []string{"a", "b"},
 	}
 	b, err := MarshalIndent(sparseBundleHeader, "   ")
 	if err != nil {
