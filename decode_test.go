@@ -8,8 +8,10 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -511,5 +513,45 @@ func TestDecodeTagSkip(t *testing.T) {
 
 	if testStruct.SkipTag != "" {
 		t.Error("field decoded when it was tagged as -")
+	}
+}
+
+// TestXMLPlutilParity tests parity with plutil -lint on macOS
+func TestXMLPlutilParity(t *testing.T) {
+	type data struct {
+		Key string `plist:"key"`
+	}
+	tests, err := ioutil.ReadDir("testdata/xml/")
+	if err != nil {
+		t.Fatalf("could not open testdata/xml: %v", err)
+	}
+
+	plutil, _ := exec.LookPath("plutil")
+
+	for _, test := range tests {
+		testPath := filepath.Join("testdata/xml/", test.Name())
+		buf, err := ioutil.ReadFile(testPath)
+		if err != nil {
+			t.Errorf("could not read test %s: %v", test.Name(), err)
+			continue
+		}
+		v := new(data)
+		err = Unmarshal(buf, v)
+
+		shouldFail := strings.HasSuffix(test.Name(), ".failure.plist")
+		if plutil != "" {
+			plutilFail := exec.Command(plutil, "-lint", testPath).Run() != nil
+			if shouldFail != plutilFail {
+				t.Errorf("expected plutil test failure: %v for %s, but got test failure: %v", shouldFail, test.Name(), plutilFail)
+			}
+		}
+
+		if shouldFail && err == nil {
+			t.Errorf("expected error for test %s but got: nil", test.Name())
+		} else if !shouldFail && err != nil {
+			t.Errorf("expected no error for test %s but got: %v", test.Name(), err)
+		} else if !shouldFail && v.Key != "val" {
+			t.Errorf("expected key=val for test %s but got: key=%s", test.Name(), v.Key)
+		}
 	}
 }
