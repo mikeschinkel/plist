@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/base64"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
@@ -110,7 +110,7 @@ func TestDecodeBoolean(t *testing.T) {
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><true/></plist>`
 	var data bool
-	expected := true
+	const expected = true
 	if err := Unmarshal([]byte(input), &data); err != nil {
 		t.Fatal(err)
 	}
@@ -270,20 +270,31 @@ func TestDecodeUnknownStructField(t *testing.T) {
 	}
 }
 
+func tryClose(t *testing.T, c io.Closer) {
+	err := c.Close()
+	if err != nil {
+		t.Error(err.Error())
+	}
+}
+
 func TestHTTPDecoding(t *testing.T) {
 	const raw = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><string>bar</string></plist>`
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(raw))
+		_, err := w.Write([]byte(raw))
+		if err != nil {
+			t.Fatal(err.Error())
+		}
 	}))
 	defer ts.Close()
 	res, err := http.Get(ts.URL)
 	if err != nil {
 		log.Fatalf("GET failed: %v", err)
 	}
-	defer res.Body.Close()
+	defer tryClose(t, res.Body)
+
 	var foo string
 	d := NewXMLDecoder(res.Body)
 	err = d.Decode(&foo)
@@ -339,7 +350,7 @@ func TestDecodeBinaryPlist(t *testing.T) {
 				Data     [][]byte  `plist:"data"`
 			}
 
-			content, err := ioutil.ReadFile(filepath.Join("testdata", tt.filename))
+			content, err := os.ReadFile(filepath.Join("testdata", tt.filename))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -459,7 +470,7 @@ func TestUnmarshaler(t *testing.T) {
 
 func TestFuzzCrashers(t *testing.T) {
 	dir := filepath.Join("testdata", "crashers")
-	testDir, err := ioutil.ReadDir(dir)
+	testDir, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading dir %q: %s", dir, err)
 	}
@@ -469,16 +480,20 @@ func TestFuzzCrashers(t *testing.T) {
 		t.Run(tc.Name(), func(t *testing.T) {
 			t.Parallel()
 
-			crasher, err := ioutil.ReadFile(filepath.Join("testdata", "crashers", tc.Name()))
+			crasher, err := os.ReadFile(filepath.Join("testdata", "crashers", tc.Name()))
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			var i interface{}
-			Unmarshal(crasher, &i)
+			noop(Unmarshal(crasher, &i))
+
 		})
 	}
 }
+
+// noop here for use to satisfy linters
+func noop(a interface{}) {}
 
 func TestSmallInput(t *testing.T) {
 	type nop struct{}
@@ -521,7 +536,7 @@ func TestXMLPlutilParity(t *testing.T) {
 	type data struct {
 		Key string `plist:"key"`
 	}
-	tests, err := ioutil.ReadDir("testdata/xml/")
+	tests, err := os.ReadDir("testdata/xml/")
 	if err != nil {
 		t.Fatalf("could not open testdata/xml: %v", err)
 	}
@@ -530,7 +545,7 @@ func TestXMLPlutilParity(t *testing.T) {
 
 	for _, test := range tests {
 		testPath := filepath.Join("testdata/xml/", test.Name())
-		buf, err := ioutil.ReadFile(testPath)
+		buf, err := os.ReadFile(testPath)
 		if err != nil {
 			t.Errorf("could not read test %s: %v", test.Name(), err)
 			continue
