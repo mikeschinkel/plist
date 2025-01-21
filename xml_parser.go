@@ -155,30 +155,54 @@ func (p *xmlParser) parseBoolean(element *xml.StartElement) (*plistValue, error)
 	return &plistValue{Boolean, plistBoolean}, nil
 }
 
-func (p *xmlParser) parseArray(element *xml.StartElement) (*plistValue, error) {
-	var subvalues []*plistValue
+func (p *xmlParser) parseArray(element *xml.StartElement) (value *plistValue, err error) {
+	var token xml.Token
+	var subValues []*plistValue
+	var subValue *plistValue
+
 	for {
-		token, err := p.Token()
+		token, err = p.Token()
 		if err != nil {
-			return nil, err
+			goto end
 		}
 		switch el := token.(type) {
 		case xml.EndElement:
-			return &plistValue{Array, subvalues}, nil
+			value = &plistValue{Array, subValues}
+			goto end
 		case xml.StartElement:
-			subv, err := p.parseXMLElement(&el)
+			subValue, err = p.parseXMLElement(&el)
 			if err != nil {
-				return nil, err
+				err = errors.Join(err,
+					ErrFailedToParseXMLStartElement,
+					fmt.Errorf("%s=%s", ElementNameLogArg, el.Name),
+					fmt.Errorf("%s=%#v", ElementValueLogArg, el),
+				)
+				goto end
 			}
-			subvalues = append(subvalues, subv)
+			subValues = append(subValues, subValue)
 		case xml.CharData:
-			if len(bytes.TrimSpace(el)) != 0 {
-				return nil, errors.New("plist: unexpected non-empty xml.CharData")
+			if len(bytes.TrimSpace(el)) == 0 {
+				continue
 			}
+			err = errors.Join(
+				ErrUnexpectedNonEmptyXMLCharData,
+				fmt.Errorf("%s=%s", ElementValueLogArg, string(el)),
+			)
+			goto end
+		case xml.Comment:
+			continue
 		default:
-			return nil, fmt.Errorf("unexpected element: %T", el)
+			err = ErrUnexpectedElement
+			err = errors.Join(
+				ErrUnexpectedElement,
+				fmt.Errorf("%s=%T", ElementTypeLogArg, el),
+				fmt.Errorf("%s=%v", ElementValueLogArg, el),
+			)
+			goto end
 		}
 	}
+end:
+	return value, err
 }
 
 func (p *xmlParser) parseReal(element *xml.StartElement) (*plistValue, error) {
