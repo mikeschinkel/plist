@@ -254,9 +254,9 @@ func (d *Decoder) unmarshalArray(pval *plistValue, v reflect.Value) error {
 			if ncap < 4 {
 				ncap = 4
 			}
-			new := reflect.MakeSlice(v.Type(), v.Len(), ncap)
-			reflect.Copy(new, v)
-			v.Set(new)
+			slice := reflect.MakeSlice(v.Type(), v.Len(), ncap)
+			reflect.Copy(slice, v)
+			v.Set(slice)
 		}
 		n := v.Len()
 		v.SetLen(cnt)
