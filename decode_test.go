@@ -285,7 +285,7 @@ func TestHTTPDecoding(t *testing.T) {
 	}
 	defer res.Body.Close()
 	var foo string
-	d := NewDecoder(res.Body)
+	d := NewXMLDecoder(res.Body)
 	err = d.Decode(&foo)
 	if err != nil {
 		t.Fatalf("Decode: %v", err)
