@@ -199,12 +199,17 @@ func (d *Decoder) unmarshalDictionary(pval *plistValue, v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Struct:
 		fields := cachedTypeFields(v.Type())
-		for _, field := range fields {
+		for i, field := range fields {
 			if _, ok := subvalues[field.name]; !ok {
 				continue
 			}
 			if err := d.unmarshal(subvalues[field.name], field.value(v)); err != nil {
-				return err
+				return errors.Join(err,
+					fmt.Errorf("field_no=%d", i),
+					fmt.Errorf("field=%s", field.name),
+
+					fmt.Errorf("subvalues=%v", pval.value.(*dictionary).String()),
+				)
 			}
 		}
 	case reflect.Map:
@@ -255,10 +260,12 @@ func (d *Decoder) unmarshalArray(pval *plistValue, v reflect.Value) error {
 		}
 		n := v.Len()
 		v.SetLen(cnt)
-		for _, sval := range subvalues {
+		for i, sval := range subvalues {
 			if err := d.unmarshal(sval, v.Index(n)); err != nil {
 				v.SetLen(cnt)
-				return err
+				return errors.Join(err,
+					fmt.Errorf("subvalue_no=%d", i),
+				)
 			}
 			n++
 		}
