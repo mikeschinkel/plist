@@ -1,6 +1,10 @@
 package plist
 
-import "sort"
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
 
 type plistKind uint
 
@@ -33,9 +37,20 @@ type plistValue struct {
 	value interface{}
 }
 
+func (v plistValue) String() string {
+	return fmt.Sprintf("%v", v.value)
+}
+
 type signedInt struct {
 	value  uint64
 	signed bool
+}
+
+func (i signedInt) String() string {
+	if i.signed {
+		return fmt.Sprintf("%d", int(i.value))
+	}
+	return fmt.Sprintf("%d", i.value)
 }
 
 type sizedFloat struct {
@@ -43,11 +58,29 @@ type sizedFloat struct {
 	bits  int
 }
 
+func (s sizedFloat) String() string {
+	return fmt.Sprintf("%v [%d bits]", s.value, s.bits)
+}
+
 type dictionary struct {
 	count  int
 	m      map[string]*plistValue
 	keys   sort.StringSlice
 	values []*plistValue
+}
+
+func (d *dictionary) String() string {
+	var sb strings.Builder
+	for k, v := range d.m {
+		switch v.kind {
+		case Invalid:
+		case Dictionary, Array, Data:
+			print()
+		case String, Integer, Real, Boolean, Date:
+			sb.WriteString(fmt.Sprintf("%v=%v; ", k, v.value))
+		}
+	}
+	return sb.String()
 }
 
 func (d *dictionary) Len() int {
