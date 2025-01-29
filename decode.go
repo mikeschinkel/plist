@@ -163,34 +163,50 @@ func (d *Decoder) unmarshal(pval *plistValue, v reflect.Value) error {
 }
 
 func (d *Decoder) unmarshalDate(pval *plistValue, v reflect.Value) error {
-	if v.Type() != reflect.TypeOf((*time.Time)(nil)).Elem() {
+	switch {
+	case v.Type() == reflect.TypeOf((*time.Time)(nil)).Elem():
+		v.Set(reflect.ValueOf(pval.value.(time.Time)))
+	case v.Kind() == reflect.Interface:
+		v.Set(reflect.ValueOf(pval.value))
+	default:
 		return UnmarshalTypeError{fmt.Sprintf("%v", pval.value), v.Type()}
 	}
-	v.Set(reflect.ValueOf(pval.value.(time.Time)))
 	return nil
 }
 
 func (d *Decoder) unmarshalData(pval *plistValue, v reflect.Value) error {
-	if v.Kind() != reflect.Slice || v.Type().Elem().Kind() != reflect.Uint8 {
+	switch {
+	case v.Kind() == reflect.Interface:
+		v.Set(reflect.ValueOf(pval.value))
+	case v.Kind() != reflect.Slice || v.Type().Elem().Kind() != reflect.Uint8:
 		return UnmarshalTypeError{fmt.Sprintf("%s", pval.value.([]byte)), v.Type()}
+	default:
+		v.SetBytes(pval.value.([]byte))
 	}
-	v.SetBytes(pval.value.([]byte))
 	return nil
 }
 
 func (d *Decoder) unmarshalReal(pval *plistValue, v reflect.Value) error {
-	if v.Kind() != reflect.Float32 && v.Kind() != reflect.Float64 {
+	switch v.Kind() {
+	case reflect.Float32, reflect.Float64:
+		v.SetFloat(pval.value.(sizedFloat).value)
+	case reflect.Interface:
+		v.Set(reflect.ValueOf(pval.value))
+	default:
 		return UnmarshalTypeError{fmt.Sprintf("%v", pval.value.(sizedFloat).value), v.Type()}
 	}
-	v.SetFloat(pval.value.(sizedFloat).value)
 	return nil
 }
 
 func (d *Decoder) unmarshalBoolean(pval *plistValue, v reflect.Value) error {
-	if v.Kind() != reflect.Bool {
+	switch v.Kind() {
+	case reflect.Bool:
+		v.SetBool(pval.value.(bool))
+	case reflect.Interface:
+		v.Set(reflect.ValueOf(pval.value))
+	default:
 		return UnmarshalTypeError{fmt.Sprintf("%v", pval.value), v.Type()}
 	}
-	v.SetBool(pval.value.(bool))
 	return nil
 }
 
@@ -227,6 +243,8 @@ func (d *Decoder) unmarshalDictionary(pval *plistValue, v reflect.Value) error {
 			}
 			v.SetMapIndex(keyv, mapElem)
 		}
+	case reflect.Interface:
+		v.Set(reflect.ValueOf(pval.value)) // TODO: Verify this does not need more than this
 	default:
 		return UnmarshalTypeError{"dict", v.Type()}
 	}
@@ -234,10 +252,14 @@ func (d *Decoder) unmarshalDictionary(pval *plistValue, v reflect.Value) error {
 }
 
 func (d *Decoder) unmarshalString(pval *plistValue, v reflect.Value) error {
-	if v.Kind() != reflect.String {
+	switch v.Kind() {
+	case reflect.String:
+		v.SetString(pval.value.(string))
+	case reflect.Interface:
+		v.Set(reflect.ValueOf(pval.value))
+	default:
 		return UnmarshalTypeError{fmt.Sprintf("%s", pval.value.(string)), v.Type()}
 	}
-	v.SetString(pval.value.(string))
 	return nil
 }
 
@@ -269,6 +291,8 @@ func (d *Decoder) unmarshalArray(pval *plistValue, v reflect.Value) error {
 			}
 			n++
 		}
+	case reflect.Interface:
+		v.Set(reflect.ValueOf(pval.value)) // TODO: Verify this does not need more than this
 	default:
 		return UnmarshalTypeError{"array", v.Type()}
 	}
@@ -287,6 +311,8 @@ func (d *Decoder) unmarshalInteger(pval *plistValue, v reflect.Value) error {
 				fmt.Sprintf("%v", int64(pval.value.(signedInt).value)), v.Type()}
 		}
 		v.SetUint(pval.value.(signedInt).value)
+	case reflect.Interface:
+		v.Set(reflect.ValueOf(pval.value))
 	default:
 		return UnmarshalTypeError{
 			fmt.Sprintf("%v", pval.value.(signedInt).value), v.Type()}
