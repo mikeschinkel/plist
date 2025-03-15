@@ -91,7 +91,6 @@ func (d *Decoder) Decode(v interface{}) error {
 }
 
 func (d *Decoder) unmarshal(pval *plistValue, v reflect.Value) error {
-
 	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
 			v.Set(reflect.New(v.Type().Elem()))
